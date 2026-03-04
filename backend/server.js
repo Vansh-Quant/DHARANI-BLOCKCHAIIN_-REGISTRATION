@@ -110,3 +110,28 @@ app.post('/api/register-property', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+// Route to transfer property ownership
+app.post('/transfer-property', async (req, res) => {
+  const { tokenId, fromEmail, toEmail } = req.body;
+  try {
+    // 1. Update the property record in MongoDB
+    const updatedProperty = await Property.findOneAndUpdate(
+      { tokenId: tokenId },
+      { ownerEmail: toEmail, lastTransferDate: new Date() },
+      { new: true }
+    );
+
+    // 2. Log the transaction for the Ownership History Timeline
+    await Transaction.create({
+      tokenId,
+      from: fromEmail,
+      to: toEmail,
+      type: 'TRANSFER',
+      timestamp: new Date()
+    });
+
+    res.status(200).json({ message: "Transfer successful", updatedProperty });
+  } catch (err) {
+    res.status(500).json({ error: "Transfer failed", details: err.message });
+  }
+});
