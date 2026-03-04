@@ -1,3 +1,5 @@
+const dns = require('dns');
+dns.setServers(['8.8.8.8', '8.8.4.4']); // Forces Google's DNS
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
