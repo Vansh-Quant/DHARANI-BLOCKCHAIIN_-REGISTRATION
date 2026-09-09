@@ -1,9 +1,9 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 const DharaniModule = buildModule("DharaniModule", (m) => {
-  const dharani = m.contract("DharaniRegistry");
+  const propertyRegistry = m.contract("PropertyRegistry");
 
-  return { dharani };
+  return { propertyRegistry };
 });
 
 export default DharaniModule;
