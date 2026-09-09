@@ -1,21 +1,42 @@
-# Node modules
-/node_modules
+# Dependencies
+/node_modules/
+**/node_modules/
 
-# Compilation output
-/dist
-
-# pnpm deploy output
-/bundle
-
-# Hardhat Build Artifacts
-/artifacts
-
-# Hardhat compilation (v2) support directory
-/cache
-
-# Typechain output
-/types
-
-# Hardhat coverage reports
-/coverage
+# Environment and secrets
 .env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+
+# Build output
+/dist/
+**/dist/
+/build/
+**/build/
+
+# Hardhat output
+/artifacts/
+**/artifacts/
+/cache/
+**/cache/
+/types/
+**/types/
+/coverage/
+**/coverage/
+
+# Runtime / local files
+*.log
+*.tmp
+*.local
+.DS_Store
+Thumbs.db
+
+# IDE / editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+Desktop.ini
