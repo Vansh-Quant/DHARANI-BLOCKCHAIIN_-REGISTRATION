@@ -1,57 +1,105 @@
-# Sample Hardhat 3 Beta Project (`mocha` and `ethers`)
+# DHARANI
 
-This project showcases a Hardhat 3 Beta project using `mocha` for tests and the `ethers` library for Ethereum interactions.
+**Don't just store land records — create trust around them.**
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+DHARANI is a land-record verification and property-trust platform designed to reconcile information from multiple sources, surface discrepancies, route cases to authorized review, and maintain an auditable history of verification and ownership changes.
 
-## Project Overview
+## Core flow
 
-This example project includes:
+```text
+Source Records
+     ↓
+Normalize & Compare
+     ↓
+Detect Conflicts
+     ↓
+Authority Review
+     ↓
+Verified / Conflict / Rejected
+     ↓
+Audit Trail
+     ↓
+Blockchain Proof Anchor
+     ↓
+Property Passport
+```
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using `mocha` and ethers.js
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+### What DHARANI adds
 
-## Usage
+- **Cross-source verification** — compare property information instead of trusting a single record.
+- **Conflict detection** — surface mismatches in fields such as owner, survey details, area, encumbrance and litigation status.
+- **Authority workflow** — authorized reviewers remain the final decision-makers.
+- **Property passport** — provide a structured, user-facing view of a property's verification state and history.
+- **Transfer workflow** — block demo transfers until the property has reached a verified state and require buyer acceptance.
+- **Auditability** — preserve important verification and transfer events for traceability.
+- **Blockchain proof layer** — use cryptographic anchoring to make a verification artifact tamper-evident; blockchain is not treated as the legal source of title.
 
-### Running Tests
+## Current stack
 
-To run all the tests in the project, execute the following command:
+| Layer | Technology |
+|---|---|
+| Backend API | Go + Gin |
+| Database | MongoDB |
+| Blockchain | Solidity + Hardhat 3 + ethers |
+| Web UI | React (frontend integration) |
+| Mobile | React Native / Expo (mobile integration) |
+
+## Repository structure
+
+```text
+.
+├── backend/              # Go API and MongoDB integration
+├── contracts/            # Solidity property-registry contracts
+├── frontend/             # Web application
+├── ignition/             # Hardhat Ignition deployment modules
+├── scripts/              # Blockchain/development scripts
+├── test/                 # Smart-contract tests
+├── hardhat.config.ts     # Hardhat configuration
+└── README.md
+```
+
+## Backend quick start
+
+The backend expects MongoDB to be reachable through `MONGODB_URI` and listens on port `8080` by default.
+
+```powershell
+cd backend
+$env:MONGODB_URI="mongodb://127.0.0.1:27017"
+go run main.go
+```
+
+Health endpoint:
+
+```text
+GET http://localhost:8080/api/v1/health
+```
+
+For local demonstrations, the authentication flow currently uses a fixed demo OTP (`1234`). This is intentionally a development/demo mechanism and must be replaced by a real OTP provider before production use.
+
+## Smart-contract development
+
+Install dependencies from the repository root and run:
 
 ```shell
+npm install
+npx hardhat compile
 npx hardhat test
 ```
 
-You can also selectively run the Solidity or `mocha` tests:
+The repository uses Hardhat 3 configuration with Solidity `0.8.28`. The current `PropertyRegistry.sol` is an intermediate contract implementation and is being hardened toward authority-controlled verification and cryptographic verification anchoring.
 
-```shell
-npx hardhat test solidity
-npx hardhat test mocha
-```
+## Security and governance boundary
 
-### Make a deployment to Sepolia
+DHARANI does **not** claim that putting information on a blockchain makes that information legally true. The platform is intended to improve reconciliation, traceability and reviewability around land information. Legal title and official decisions remain with the competent authority and underlying government records.
 
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
+Sensitive personal information and raw land documents should remain off-chain. Blockchain should contain only the minimum cryptographic references required for tamper-evident verification.
 
-To run the deployment to a local chain:
+## Demo principle
 
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
-```
+The strongest demonstration is not "we put property data on blockchain." It is:
 
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
+> **We compare evidence, explain conflicts, obtain an authorized decision, and anchor the resulting verification artifact so later changes can be detected.**
 
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
+---
 
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
-
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-```
-
-After setting the variable, you can run the deployment with the Sepolia network:
-
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
-```
+DHARANI — SIH 2026 project.
