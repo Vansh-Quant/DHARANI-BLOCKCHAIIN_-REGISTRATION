@@ -138,6 +138,19 @@ contract PropertyRegistry {
         return properties[propertyId];
     }
 
+    /**
+     * @notice Return only the verification fields used by integration clients.
+     * Keeping these as fixed-size values avoids client-side ABI decoding issues
+     * with the dynamic string field in Property when running against local EVMs.
+     */
+    function getPropertyVerification(
+        uint256 propertyId
+    ) external view returns (bool verified, bytes32 latestVerificationHash) {
+        require(propertyId > 0 && propertyId <= propertyCounter, "Property does not exist");
+        Property storage property = properties[propertyId];
+        return (property.verified, property.latestVerificationHash);
+    }
+
     function getVerificationAnchors(
         uint256 propertyId
     ) external view returns (VerificationAnchor[] memory) {
