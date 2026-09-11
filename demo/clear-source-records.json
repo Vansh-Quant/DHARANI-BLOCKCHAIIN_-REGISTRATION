@@ -1,0 +1,5 @@
+[
+  {"source_type":"REVENUE","source_record_id":"REV-DEMO-001","area":1200,"owner_name":"Demo Citizen","ulpin":"ULPIN-DEMO-001","survey_number":"123/4","lineage_status":"VALID","encumbrance_status":"CLEAR","litigation_status":"CLEAR","overlap_flag":false},
+  {"source_type":"REGISTRATION","source_record_id":"REG-DEMO-001","area":1200,"owner_name":"Demo Citizen","ulpin":"ULPIN-DEMO-001","survey_number":"123/4","lineage_status":"VALID","encumbrance_status":"CLEAR","litigation_status":"CLEAR","overlap_flag":false},
+  {"source_type":"GIS","source_record_id":"GIS-DEMO-001","area":1200,"owner_name":"Demo Citizen","ulpin":"ULPIN-DEMO-001","survey_number":"123/4","lineage_status":"VALID","encumbrance_status":"CLEAR","litigation_status":"CLEAR","overlap_flag":false}
+]
