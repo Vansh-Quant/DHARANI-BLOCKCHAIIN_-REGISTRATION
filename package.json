@@ -10,7 +10,9 @@
     "test:solidity": "hardhat test solidity",
     "test:mocha": "hardhat test mocha",
     "clean": "hardhat clean",
+    "node:local": "hardhat node",
     "deploy:local": "hardhat ignition deploy ignition/modules/dharanimodule.ts",
+    "deploy:localhost": "hardhat ignition deploy ignition/modules/dharanimodule.ts --network localhost",
     "anchor:verification": "hardhat run scripts/anchor-verification.ts"
   },
   "devDependencies": {
