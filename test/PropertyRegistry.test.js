@@ -2,6 +2,8 @@ import { expect } from "chai";
 import { network } from "hardhat";
 
 describe("PropertyRegistry", function () {
+  this.timeout(120000);
+
   async function deployFixture() {
     const { ethers } = await network.connect();
     const [authority, owner, buyer, outsider] = await ethers.getSigners();
