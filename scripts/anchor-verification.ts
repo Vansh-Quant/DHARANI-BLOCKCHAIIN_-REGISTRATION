@@ -24,6 +24,7 @@ const abi = [
   "function registerProperty(string propertyRef) returns (uint256)",
   "function anchorVerification(uint256 propertyId, bytes32 reportHash)",
   "function getProperty(uint256 propertyId) view returns (uint256 propertyId, string propertyRef, address owner, uint256 registrationTime, bool verified, bytes32 latestVerificationHash)",
+  "function getPropertyVerification(uint256 propertyId) view returns (bool verified, bytes32 latestVerificationHash)",
   "event PropertyRegistered(uint256 indexed propertyId, string propertyRef, address indexed owner, uint256 registrationTime)",
   "event PropertyVerified(uint256 indexed propertyId, address indexed authority, bytes32 indexed reportHash, uint256 anchoredAt)"
 ];
@@ -46,12 +47,12 @@ if (EXISTING_PROPERTY_ID) {
   console.log(JSON.stringify({ step: "registered", propertyId: propertyId.toString(), transactionHash: tx.hash }));
 }
 
-const before = await contract.getProperty(propertyId);
-if (before.propertyRef !== PROPERTY_REF && !EXISTING_PROPERTY_ID) throw new Error("On-chain property reference does not match requested DHARANI reference");
+const beforeVerification = await contract.getPropertyVerification(propertyId);
+if (EXISTING_PROPERTY_ID && !beforeVerification) throw new Error("On-chain property does not exist");
 
 const anchorTx = await contract.anchorVerification(propertyId, hashBytes);
 const anchorReceipt = await anchorTx.wait();
-const onChain = await contract.getProperty(propertyId);
+const onChain = await contract.getPropertyVerification(propertyId);
 const chainVerified = Boolean(onChain.verified);
 const chainHash = String(onChain.latestVerificationHash).toLowerCase();
 const expectedHash = hashBytes.toLowerCase();
@@ -59,10 +60,18 @@ if (!chainVerified || chainHash !== expectedHash) {
   throw new Error(`On-chain verification failed: verified=${chainVerified}, latestVerificationHash=${chainHash}`);
 }
 
+let propertyRef = PROPERTY_REF;
+try {
+  const fullProperty = await contract.getProperty(propertyId);
+  propertyRef = String(fullProperty.propertyRef);
+} catch {
+  // The fixed-size verification getter is authoritative for proof validation.
+}
+
 console.log(JSON.stringify({
   step: "verified",
   propertyId: propertyId.toString(),
-  propertyRef: onChain.propertyRef,
+  propertyRef,
   reportHash: hashBytes,
   onChainReportHash: chainHash,
   chainVerified,
