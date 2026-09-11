@@ -57,8 +57,10 @@ type VerificationReport struct {
 func registerVerificationRoutes(protected *gin.RouterGroup) {
 	protected.POST("/source-records", createSourceRecord)
 	protected.GET("/source-records/:propertyId", getSourceRecords)
-	protected.POST("/verification/reconcile/:propertyId/run", runVerification)
-	protected.GET("/verification/reconcile/:propertyId/report", getVerificationReport)
+	// Keep reconciliation under a distinct static prefix so it cannot collide
+	// with the existing /verification/:id/review route in Gin's radix tree.
+	protected.POST("/reconciliation/:propertyId/run", runVerification)
+	protected.GET("/reconciliation/:propertyId/report", getVerificationReport)
 }
 
 func sourceAuthorityRequired(c *gin.Context) bool {
@@ -131,7 +133,7 @@ func getVerificationReport(c *gin.Context) {
 func evaluateVerificationRules(records []SourceRecord) []Conflict {
 	conflicts:=make([]Conflict,0); if len(records)<2{return conflicts}
 	minArea,maxArea:=records[0].Area,records[0].Area; areaSources:=make([]string,0,len(records))
-	for _,r:=range records { if r.Area>0 {if r.Area<minArea{minArea=r.Area};if r.Area>maxArea{maxArea=r.Area};areaSources=append(areaSources,r.SourceType)} }
+	for _,r:=range records { if r.Area>0 {if minArea==0||r.Area<minArea{minArea=r.Area};if r.Area>maxArea{maxArea=r.Area};areaSources=append(areaSources,r.SourceType)} }
 	if minArea>0&&maxArea>0&&((maxArea-minArea)/minArea)>0.01 { conflicts=append(conflicts,Conflict{RuleCode:"AREA_MISMATCH",Severity:"HIGH",Title:"Extent mismatch",Description:fmt.Sprintf("Source areas range from %.2f to %.2f.",minArea,maxArea),Sources:areaSources}) }
 	ownerBySource:=map[string]string{}; for _,r:=range records {if strings.TrimSpace(r.OwnerName)!=""{ownerBySource[r.SourceType]=normalizeText(r.OwnerName)}}
 	if len(uniqueValues(ownerBySource))>1 {sources:=make([]string,0,len(ownerBySource));for source:=range ownerBySource{sources=append(sources,source)};sort.Strings(sources);conflicts=append(conflicts,Conflict{RuleCode:"OWNERSHIP_MISMATCH",Severity:"HIGH",Title:"Ownership mismatch",Description:"Normalized owner names differ across supplied sources.",Sources:sources})}
