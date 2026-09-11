@@ -1,0 +1,12 @@
+{
+  "property_id": "DHR-DEMO12345",
+  "blockchain_property_id": 1,
+  "property_ref": "DHR-DEMO12345",
+  "report_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "on_chain_report_hash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "chain_verified": true,
+  "transaction_hash": "0xDEMO_TRANSACTION_HASH",
+  "contract_address": "0xDEMO_CONTRACT_ADDRESS",
+  "network": "hardhat-local",
+  "block_number": 3
+}
