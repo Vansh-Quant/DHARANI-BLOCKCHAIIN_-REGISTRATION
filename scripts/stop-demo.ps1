@@ -1,5 +1,8 @@
 $ErrorActionPreference = "SilentlyContinue"
-Write-Host "Stopping DHARANI demo processes..." -ForegroundColor Cyan
-Get-Process node,go,mongod -ErrorAction SilentlyContinue | Stop-Process -Force
-Get-NetTCPConnection -LocalPort 8080,8545,27018 -ErrorAction SilentlyContinue | ForEach-Object { try { Stop-Process -Id $_.OwningProcess -Force } catch {} }
-Write-Host "DHARANI demo processes stopped." -ForegroundColor Green
+Write-Host "Stopping DHARANI demo listeners..." -ForegroundColor Cyan
+$ports = @(8080, 8545, 27018)
+$connections = Get-NetTCPConnection -LocalPort $ports -ErrorAction SilentlyContinue
+$connections | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object {
+    try { Stop-Process -Id $_ -Force } catch {}
+}
+Write-Host "DHARANI demo listeners stopped." -ForegroundColor Green
