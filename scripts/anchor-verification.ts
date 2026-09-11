@@ -25,7 +25,7 @@ let signer: ethers.Signer;
 if (PRIVATE_KEY) {
   signer = new ethers.Wallet(PRIVATE_KEY, provider);
 } else if (isLocalhost) {
-  signer = provider.getSigner(0);
+  signer = await provider.getSigner(0);
 } else {
   throw new Error("BLOCKCHAIN_PRIVATE_KEY is required for non-local networks");
 }
