@@ -54,10 +54,27 @@ Transfer / Readiness Workflow
 ├── contracts/            # Solidity property-registry contracts
 ├── frontend/             # Frontend integration pointer
 ├── ignition/             # Hardhat Ignition deployment modules
-├── scripts/              # Blockchain/development scripts
+├── scripts/              # Blockchain/development/demo scripts
 ├── test/                 # Smart-contract tests
 ├── hardhat.config.ts     # Hardhat configuration
 └── README.md
+```
+
+## One-click local demo
+
+On the Windows demo machine, after Node.js, Go and MongoDB are installed:
+
+```powershell
+Set-Location "<repo>"
+.\scripts\start-demo.ps1
+```
+
+The launcher starts/reuses MongoDB on `27018`, starts a local Hardhat node on `8545`, deploys `PropertyRegistry`, and starts the Go API on `8080`. It prints the deployed contract address so the frontend/demo environment can use the same local deployment.
+
+To stop only the DHARANI demo listeners:
+
+```powershell
+.\scripts\stop-demo.ps1
 ```
 
 ## Backend quick start
@@ -106,15 +123,18 @@ npx hardhat test
 
 The repository uses Hardhat 3 with Solidity `0.8.28`. `PropertyRegistry.sol` is the core proof contract. It stores minimal property references and verification hashes, while sensitive records remain off-chain.
 
-For the local blockchain demo:
+For the local blockchain demo, the launcher uses:
 
 ```shell
-npx hardhat node
+npm run node:local
+npm run deploy:localhost
 ```
 
-In another terminal, deploy the contract and run the verification anchor script using the deployed address and a verification report hash. On localhost, the script uses Hardhat account #0 automatically; a private key is required only for remote networks.
+The anchor script reads the property back from the contract after the transaction and checks that the on-chain verification flag and latest verification hash match the expected report hash before reporting success.
 
-The anchor script now reads the property back from the contract after the transaction and checks that the on-chain verification flag and latest verification hash match the expected report hash before reporting success.
+## CI checks
+
+The repository CI runs Go formatting, `go vet`, Go unit tests, Solidity compilation and Hardhat tests on `main` and `developer` pushes and pull requests.
 
 ## Security and governance boundary
 
