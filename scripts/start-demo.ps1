@@ -4,17 +4,16 @@ $MongoBin = "C:\Program Files\MongoDB\Server\8.2\bin\mongod.exe"
 $MongoData = Join-Path $env:USERPROFILE "dharani-mongodb-data"
 $MongoPort = 27018
 $ApiPort = 8080
+$FrontendPort = 5173
 
 Write-Host "Starting DHARANI local demo..." -ForegroundColor Cyan
 
-if (-not (Test-Path $MongoBin)) {
-    throw "MongoDB executable not found at $MongoBin"
-}
+if (-not (Test-Path $MongoBin)) { throw "MongoDB executable not found at $MongoBin" }
 if (-not (Test-Path $MongoData)) { New-Item -ItemType Directory -Path $MongoData | Out-Null }
 
 $mongoListening = Get-NetTCPConnection -LocalPort $MongoPort -State Listen -ErrorAction SilentlyContinue
 if (-not $mongoListening) {
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "& '$MongoBin' --dbpath '$MongoData' --port $MongoPort"
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", "& '$MongoBin' --dbpath '$MongoData' --port $MongoPort --bind_ip 127.0.0.1"
     Start-Sleep -Seconds 2
 }
 
@@ -37,7 +36,9 @@ try {
     $env:MONGODB_URI = "mongodb://127.0.0.1:$MongoPort/dharani"
     $env:API_PORT = "$ApiPort"
     Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$Root\backend'; `$env:MONGODB_URI='mongodb://127.0.0.1:$MongoPort/dharani'; `$env:API_PORT='$ApiPort'; go run ."
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$Root'; npx --yes http-server frontend -p $FrontendPort -c-1"
     Write-Host "DHARANI API: http://localhost:$ApiPort" -ForegroundColor Green
+    Write-Host "Frontend: http://localhost:$FrontendPort" -ForegroundColor Green
     Write-Host "MongoDB: mongodb://127.0.0.1:$MongoPort/dharani" -ForegroundColor Green
     Write-Host "Blockchain RPC: http://127.0.0.1:8545" -ForegroundColor Green
     Write-Host "Contract: $contractAddress" -ForegroundColor Green
