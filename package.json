@@ -10,7 +10,8 @@
     "test:solidity": "hardhat test solidity",
     "test:mocha": "hardhat test mocha",
     "clean": "hardhat clean",
-    "deploy:local": "hardhat ignition deploy ignition/modules/dharanimodule.ts"
+    "deploy:local": "hardhat ignition deploy ignition/modules/dharanimodule.ts",
+    "anchor:verification": "hardhat run scripts/anchor-verification.ts"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^4.0.5",
