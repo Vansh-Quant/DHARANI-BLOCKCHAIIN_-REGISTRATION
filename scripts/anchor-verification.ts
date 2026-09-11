@@ -7,9 +7,10 @@ const PROPERTY_REF = process.env.BLOCKCHAIN_PROPERTY_REF || "DHARANI-DEMO";
 const REPORT_HASH = (process.env.VERIFICATION_REPORT_HASH || "").trim().toLowerCase();
 const EXISTING_PROPERTY_ID = process.env.BLOCKCHAIN_PROPERTY_ID;
 
-if (!RPC_URL || !PRIVATE_KEY || !CONTRACT_ADDRESS || !REPORT_HASH) {
+if (!RPC_URL || !CONTRACT_ADDRESS || !REPORT_HASH) {
   throw new Error(
-    "Set BLOCKCHAIN_RPC_URL, BLOCKCHAIN_PRIVATE_KEY, PROPERTY_REGISTRY_ADDRESS and VERIFICATION_REPORT_HASH. " +
+    "Set BLOCKCHAIN_RPC_URL, PROPERTY_REGISTRY_ADDRESS and VERIFICATION_REPORT_HASH. " +
+    "Set BLOCKCHAIN_PRIVATE_KEY for remote networks; localhost uses Hardhat RPC account #0 automatically. " +
     "Optionally set BLOCKCHAIN_PROPERTY_ID to anchor an already registered property."
   );
 }
@@ -19,7 +20,16 @@ if (!/^[0-9a-f]{64}$/.test(REPORT_HASH) && !/^0x[0-9a-f]{64}$/.test(REPORT_HASH)
 }
 
 const provider = new ethers.JsonRpcProvider(RPC_URL);
-const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+const isLocalhost = /127\.0\.0\.1|localhost/.test(RPC_URL);
+let signer: ethers.Signer;
+if (PRIVATE_KEY) {
+  signer = new ethers.Wallet(PRIVATE_KEY, provider);
+} else if (isLocalhost) {
+  signer = provider.getSigner(0);
+} else {
+  throw new Error("BLOCKCHAIN_PRIVATE_KEY is required for non-local networks");
+}
+
 const abi = [
   "function registerProperty(string propertyRef) returns (uint256)",
   "function anchorVerification(uint256 propertyId, bytes32 reportHash)",
@@ -27,8 +37,11 @@ const abi = [
   "event PropertyRegistered(uint256 indexed propertyId, string propertyRef, address indexed owner, uint256 registrationTime)",
   "event PropertyVerified(uint256 indexed propertyId, address indexed authority, bytes32 indexed reportHash, uint256 anchoredAt)"
 ];
-const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, wallet);
+const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, signer);
 const hashBytes = REPORT_HASH.startsWith("0x") ? REPORT_HASH : `0x${REPORT_HASH}`;
+
+const signerAddress = await signer.getAddress();
+console.log(JSON.stringify({ step: "signer", address: signerAddress, network: isLocalhost ? "localhost" : "remote" }));
 
 let propertyId: bigint;
 if (EXISTING_PROPERTY_ID) {
