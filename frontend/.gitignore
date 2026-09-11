@@ -1,0 +1,43 @@
+# Dependencies
+/node_modules/
+**/node_modules/
+
+# Environment and secrets
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Build output
+/dist/
+**/dist/
+/build/
+**/build/
+
+# Hardhat output
+/artifacts/
+**/artifacts/
+/cache/
+**/cache/
+/types/
+**/types/
+/coverage/
+**/coverage/
+
+# Runtime / local files
+*.log
+*.tmp
+*.local
+.DS_Store
+Thumbs.db
+
+# IDE / editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+Desktop.ini
