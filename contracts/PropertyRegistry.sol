@@ -1,34 +1,59 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.28;
 
+/**
+ * @title PropertyRegistry
+ * @notice Tamper-evident proof layer for DHARANI.
+ *
+ * DHARANI performs source reconciliation and authority review off-chain.
+ * This contract stores only minimal references and cryptographic proof hashes;
+ * it is not a statutory land-title or registration system.
+ */
 contract PropertyRegistry {
-    // Property structure
     struct Property {
         uint256 propertyId;
+        string propertyRef;
         address owner;
-        string propertyName;
-        string location;
-        uint256 area;
         uint256 registrationTime;
-        string propertyHash;
         bool verified;
+        bytes32 latestVerificationHash;
     }
 
-    // Mapping of property ID to property details
-    mapping(uint256 => Property) public properties;
-    mapping(address => uint256[]) public ownerProperties;
+    struct VerificationAnchor {
+        bytes32 reportHash;
+        address authority;
+        uint256 anchoredAt;
+    }
 
-    uint256 public propertyCounter = 0;
+    mapping(uint256 => Property) public properties;
+    mapping(uint256 => VerificationAnchor[]) private verificationAnchors;
+    mapping(address => uint256[]) private ownerProperties;
+    mapping(address => bool) public authorities;
+
+    uint256 public propertyCounter;
+
+    event AuthorityUpdated(address indexed account, bool enabled);
 
     event PropertyRegistered(
         uint256 indexed propertyId,
+        string propertyRef,
         address indexed owner,
-        string propertyName,
-        string location,
         uint256 registrationTime
     );
 
-    event PropertyVerified(uint256 indexed propertyId);
+    event PropertyVerified(
+        uint256 indexed propertyId,
+        address indexed authority,
+        bytes32 indexed reportHash,
+        uint256 anchoredAt
+    );
+
+    event VerificationAnchored(
+        uint256 indexed propertyId,
+        bytes32 indexed reportHash,
+        address indexed authority,
+        uint256 anchoredAt
+    );
 
     event PropertyTransferred(
         uint256 indexed propertyId,
@@ -37,87 +62,112 @@ contract PropertyRegistry {
         uint256 transferTime
     );
 
-    // Register a new property
-    function registerProperty(
-        string memory _propertyName,
-        string memory _location,
-        uint256 _area,
-        string memory _propertyHash
-    ) public {
-        require(bytes(_propertyName).length > 0, "Property name required");
-        require(_area > 0, "Area must be greater than 0");
+    modifier onlyAuthority() {
+        require(authorities[msg.sender], "Only authority can perform this action");
+        _;
+    }
 
-        uint256 propertyId = propertyCounter++;
+    constructor() {
+        authorities[msg.sender] = true;
+        emit AuthorityUpdated(msg.sender, true);
+    }
+
+    /**
+     * @notice Add or remove an authority account.
+     * Only an existing authority can manage authorities.
+     */
+    function setAuthority(address account, bool enabled) external onlyAuthority {
+        require(account != address(0), "Invalid authority");
+        authorities[account] = enabled;
+        emit AuthorityUpdated(account, enabled);
+    }
+
+    /**
+     * @notice Register a property reference owned by msg.sender.
+     * @dev Keep sensitive records off-chain; propertyRef should be a DHARANI ID.
+     */
+    function registerProperty(string calldata propertyRef) external returns (uint256) {
+        require(bytes(propertyRef).length > 0, "Property reference required");
+
+        uint256 propertyId = ++propertyCounter;
 
         properties[propertyId] = Property({
             propertyId: propertyId,
+            propertyRef: propertyRef,
             owner: msg.sender,
-            propertyName: _propertyName,
-            location: _location,
-            area: _area,
             registrationTime: block.timestamp,
-            propertyHash: _propertyHash,
-            verified: false
+            verified: false,
+            latestVerificationHash: bytes32(0)
         });
 
         ownerProperties[msg.sender].push(propertyId);
 
-        emit PropertyRegistered(
-            propertyId,
-            msg.sender,
-            _propertyName,
-            _location,
-            block.timestamp
-        );
+        emit PropertyRegistered(propertyId, propertyRef, msg.sender, block.timestamp);
+        return propertyId;
     }
 
-    // Verify a property
-    function verifyProperty(uint256 _propertyId) public {
-        require(_propertyId < propertyCounter, "Property does not exist");
-        Property storage property = properties[_propertyId];
+    /**
+     * @notice Anchor a DHARANI verification report hash.
+     * The hash is the cryptographic fingerprint of the canonical report.
+     */
+    function anchorVerification(
+        uint256 propertyId,
+        bytes32 reportHash
+    ) external onlyAuthority {
+        require(propertyId > 0 && propertyId <= propertyCounter, "Property does not exist");
+        require(reportHash != bytes32(0), "Report hash required");
+
+        Property storage property = properties[propertyId];
         property.verified = true;
+        property.latestVerificationHash = reportHash;
 
-        emit PropertyVerified(_propertyId);
-    }
-
-    // Get property details
-    function getProperty(uint256 _propertyId)
-        public
-        view
-        returns (Property memory)
-    {
-        require(_propertyId < propertyCounter, "Property does not exist");
-        return properties[_propertyId];
-    }
-
-    // Get properties owned by an address
-    function getOwnerProperties(address _owner)
-        public
-        view
-        returns (uint256[] memory)
-    {
-        return ownerProperties[_owner];
-    }
-
-    // Transfer property ownership
-    function transferProperty(uint256 _propertyId, address _newOwner) public {
-        require(_propertyId < propertyCounter, "Property does not exist");
-        require(
-            properties[_propertyId].owner == msg.sender,
-            "Only owner can transfer"
+        verificationAnchors[propertyId].push(
+            VerificationAnchor({
+                reportHash: reportHash,
+                authority: msg.sender,
+                anchoredAt: block.timestamp
+            })
         );
-        require(_newOwner != address(0), "Invalid new owner");
 
-        address previousOwner = properties[_propertyId].owner;
-        properties[_propertyId].owner = _newOwner;
-
-        ownerProperties[_newOwner].push(_propertyId);
-
-        emit PropertyTransferred(_propertyId, previousOwner, _newOwner, block.timestamp);
+        emit PropertyVerified(propertyId, msg.sender, reportHash, block.timestamp);
+        emit VerificationAnchored(propertyId, reportHash, msg.sender, block.timestamp);
     }
 
-    // Get total properties registered
-    function getTotalProperties() public view returns (uint256) {
+    function getProperty(uint256 propertyId) external view returns (Property memory) {
+        require(propertyId > 0 && propertyId <= propertyCounter, "Property does not exist");
+        return properties[propertyId];
+    }
+
+    function getVerificationAnchors(
+        uint256 propertyId
+    ) external view returns (VerificationAnchor[] memory) {
+        require(propertyId > 0 && propertyId <= propertyCounter, "Property does not exist");
+        return verificationAnchors[propertyId];
+    }
+
+    function getOwnerProperties(address owner) external view returns (uint256[] memory) {
+        return ownerProperties[owner];
+    }
+
+    /**
+     * @notice Prototype transfer/readiness action.
+     * This does not replace statutory registration or mutation procedures.
+     */
+    function transferProperty(uint256 propertyId, address newOwner) external {
+        require(propertyId > 0 && propertyId <= propertyCounter, "Property does not exist");
+        require(properties[propertyId].verified, "Property must be verified first");
+        require(properties[propertyId].owner == msg.sender, "Only owner can transfer");
+        require(newOwner != address(0), "Invalid new owner");
+        require(newOwner != msg.sender, "New owner must differ");
+
+        address previousOwner = properties[propertyId].owner;
+        properties[propertyId].owner = newOwner;
+        ownerProperties[newOwner].push(propertyId);
+
+        emit PropertyTransferred(propertyId, previousOwner, newOwner, block.timestamp);
+    }
+
+    function getTotalProperties() external view returns (uint256) {
         return propertyCounter;
     }
 }
