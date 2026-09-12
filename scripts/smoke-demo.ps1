@@ -46,6 +46,11 @@ $review = Post-Json "/verification/$propertyId/review" @{ decision='VERIFIED'; n
 Write-Host "Authority review: $($review.status)" -ForegroundColor Green
 
 $passport = Get-Json "/property/$propertyId/passport" $authorityToken
+$reportHash = [string]$passport.passport.verification_report.sha256
+if ($reportHash -notmatch '^[0-9a-fA-F]{64}$') { throw "Passport did not return a valid 64-character SHA-256 report hash. Received length $($reportHash.Length)." }
+$anchorPayload = @{ property_ref=$propertyId; report_hash=$reportHash } | ConvertTo-Json
+Set-Content -Path (Join-Path (Get-Location) '.dharani-last-anchor.json') -Value $anchorPayload -Encoding utf8
 Write-Host "Passport ready for $propertyId" -ForegroundColor Cyan
-Write-Host "Report SHA-256: $($passport.passport.verification_report.sha256)"
-Write-Host "Next: run the blockchain anchor script with that report hash."
+Write-Host "Report SHA-256: $reportHash"
+Write-Host "Anchor handoff saved to .dharani-last-anchor.json" -ForegroundColor Green
+Write-Host "Next: run npm run anchor:verification after setting BLOCKCHAIN_RPC_URL and PROPERTY_REGISTRY_ADDRESS."
