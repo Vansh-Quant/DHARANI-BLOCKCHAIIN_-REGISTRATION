@@ -1,17 +1,32 @@
 import { ethers } from "ethers";
+import fs from "node:fs";
+import path from "node:path";
 
 const RPC_URL = process.env.BLOCKCHAIN_RPC_URL || process.env.SEPOLIA_RPC_URL;
 const PRIVATE_KEY = process.env.BLOCKCHAIN_PRIVATE_KEY || process.env.SEPOLIA_PRIVATE_KEY;
 const CONTRACT_ADDRESS = process.env.PROPERTY_REGISTRY_ADDRESS;
-const PROPERTY_REF = process.env.BLOCKCHAIN_PROPERTY_REF || "DHARANI-DEMO";
-const REPORT_HASH = (process.env.VERIFICATION_REPORT_HASH || "").trim().toLowerCase();
+
+const anchorFile = path.resolve(process.cwd(), ".dharani-last-anchor.json");
+let anchorDefaults: { property_ref?: string; report_hash?: string } = {};
+if (fs.existsSync(anchorFile)) {
+  try {
+    anchorDefaults = JSON.parse(fs.readFileSync(anchorFile, "utf8"));
+  } catch {
+    // Explicit environment variables remain authoritative if the helper file is invalid.
+  }
+}
+
+const PROPERTY_REF = (process.env.BLOCKCHAIN_PROPERTY_REF || anchorDefaults.property_ref || "DHARANI-DEMO").trim();
+const REPORT_HASH = (process.env.VERIFICATION_REPORT_HASH || anchorDefaults.report_hash || "").trim().toLowerCase();
 const EXISTING_PROPERTY_ID = process.env.BLOCKCHAIN_PROPERTY_ID;
 
 if (!RPC_URL || !CONTRACT_ADDRESS || !REPORT_HASH) {
-  throw new Error("Set BLOCKCHAIN_RPC_URL, PROPERTY_REGISTRY_ADDRESS and VERIFICATION_REPORT_HASH. Set BLOCKCHAIN_PRIVATE_KEY for remote networks; localhost uses Hardhat RPC account #0 automatically.");
+  throw new Error("Set BLOCKCHAIN_RPC_URL, PROPERTY_REGISTRY_ADDRESS and VERIFICATION_REPORT_HASH, or run smoke-demo.ps1 first to create .dharani-last-anchor.json. Set BLOCKCHAIN_PRIVATE_KEY for remote networks; localhost uses Hardhat RPC account #0 automatically.");
 }
 if (!/^0x[0-9a-f]{40}$/i.test(CONTRACT_ADDRESS)) throw new Error("Invalid PROPERTY_REGISTRY_ADDRESS");
-if (!/^[0-9a-f]{64}$/.test(REPORT_HASH) && !/^0x[0-9a-f]{64}$/.test(REPORT_HASH)) throw new Error("VERIFICATION_REPORT_HASH must be a 64-character SHA-256 hex string");
+if (!/^[0-9a-f]{64}$/.test(REPORT_HASH)) {
+  throw new Error(`VERIFICATION_REPORT_HASH must be exactly 64 hexadecimal characters; received ${REPORT_HASH.length}. Value: ${REPORT_HASH}`);
+}
 
 const provider = new ethers.JsonRpcProvider(RPC_URL);
 const isLocalhost = /127\.0\.0\.1|localhost/.test(RPC_URL);
@@ -44,7 +59,7 @@ if (EXISTING_PROPERTY_ID) {
   const parsed = receipt?.logs.map((log: any) => { try { return contract.interface.parseLog(log); } catch { return null; } }).find((event: any) => event?.name === "PropertyRegistered");
   if (!parsed) throw new Error("PropertyRegistered event not found");
   propertyId = BigInt(parsed.args.propertyId);
-  console.log(JSON.stringify({ step: "registered", propertyId: propertyId.toString(), transactionHash: tx.hash }));
+  console.log(JSON.stringify({ step: "registered", propertyId: propertyId.toString(), propertyRef: PROPERTY_REF, transactionHash: tx.hash }));
 }
 
 const beforeVerification = await contract.getPropertyVerification(propertyId);
