@@ -9,24 +9,21 @@ const CONTRACT_ADDRESS = process.env.PROPERTY_REGISTRY_ADDRESS;
 const anchorFile = path.resolve(process.cwd(), ".dharani-last-anchor.json");
 let anchorDefaults: { property_ref?: string; report_hash?: string } = {};
 if (fs.existsSync(anchorFile)) {
-  try {
-    anchorDefaults = JSON.parse(fs.readFileSync(anchorFile, "utf8"));
-  } catch {
-    // Explicit environment variables remain authoritative if the helper file is invalid.
-  }
+  try { anchorDefaults = JSON.parse(fs.readFileSync(anchorFile, "utf8")); } catch {}
 }
 
 const PROPERTY_REF = (process.env.BLOCKCHAIN_PROPERTY_REF || anchorDefaults.property_ref || "DHARANI-DEMO").trim();
-const REPORT_HASH = (process.env.VERIFICATION_REPORT_HASH || anchorDefaults.report_hash || "").trim().toLowerCase();
+const envHash = (process.env.VERIFICATION_REPORT_HASH || "").trim().toLowerCase();
+const savedHash = (anchorDefaults.report_hash || "").trim().toLowerCase();
+const validHash = (value: string) => /^[0-9a-f]{64}$/.test(value);
+const REPORT_HASH = validHash(envHash) ? envHash : savedHash;
 const EXISTING_PROPERTY_ID = process.env.BLOCKCHAIN_PROPERTY_ID;
 
 if (!RPC_URL || !CONTRACT_ADDRESS || !REPORT_HASH) {
-  throw new Error("Set BLOCKCHAIN_RPC_URL, PROPERTY_REGISTRY_ADDRESS and VERIFICATION_REPORT_HASH, or run smoke-demo.ps1 first to create .dharani-last-anchor.json. Set BLOCKCHAIN_PRIVATE_KEY for remote networks; localhost uses Hardhat RPC account #0 automatically.");
+  throw new Error("Set BLOCKCHAIN_RPC_URL and PROPERTY_REGISTRY_ADDRESS, and provide a valid 64-character VERIFICATION_REPORT_HASH or run smoke-demo.ps1 first.");
 }
 if (!/^0x[0-9a-f]{40}$/i.test(CONTRACT_ADDRESS)) throw new Error("Invalid PROPERTY_REGISTRY_ADDRESS");
-if (!/^[0-9a-f]{64}$/.test(REPORT_HASH)) {
-  throw new Error(`VERIFICATION_REPORT_HASH must be exactly 64 hexadecimal characters; received ${REPORT_HASH.length}. Value: ${REPORT_HASH}`);
-}
+if (!validHash(REPORT_HASH)) throw new Error(`VERIFICATION_REPORT_HASH must be exactly 64 hexadecimal characters; received ${REPORT_HASH.length}.`);
 
 const provider = new ethers.JsonRpcProvider(RPC_URL);
 const isLocalhost = /127\.0\.0\.1|localhost/.test(RPC_URL);
@@ -44,11 +41,11 @@ const abi = [
   "event PropertyVerified(uint256 indexed propertyId, address indexed authority, bytes32 indexed reportHash, uint256 anchoredAt)"
 ];
 const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, signer);
-const hashBytes = REPORT_HASH.startsWith("0x") ? REPORT_HASH : `0x${REPORT_HASH}`;
+const hashBytes = `0x${REPORT_HASH}`;
 const signerAddress = await signer.getAddress();
 const network = await provider.getNetwork();
 
-console.log(JSON.stringify({ step: "signer", address: signerAddress, network: isLocalhost ? "localhost" : `${network.name} (${network.chainId.toString()})` }));
+console.log(JSON.stringify({ step: "signer", address: signerAddress, network: isLocalhost ? "localhost" : `${network.name} (${network.chainId.toString()})`, reportHashSource: validHash(envHash) ? "environment" : "saved-smoke-demo" }));
 
 let propertyId: bigint;
 if (EXISTING_PROPERTY_ID) {
@@ -71,27 +68,12 @@ const onChain = await contract.getPropertyVerification(propertyId);
 const chainVerified = Boolean(onChain.verified);
 const chainHash = String(onChain.latestVerificationHash).toLowerCase();
 const expectedHash = hashBytes.toLowerCase();
-if (!chainVerified || chainHash !== expectedHash) {
-  throw new Error(`On-chain verification failed: verified=${chainVerified}, latestVerificationHash=${chainHash}`);
-}
+if (!chainVerified || chainHash !== expectedHash) throw new Error(`On-chain verification failed: verified=${chainVerified}, latestVerificationHash=${chainHash}`);
 
 let propertyRef = PROPERTY_REF;
 try {
   const fullProperty = await contract.getProperty(propertyId);
   propertyRef = String(fullProperty.propertyRef);
-} catch {
-  // The fixed-size verification getter is authoritative for proof validation.
-}
+} catch {}
 
-console.log(JSON.stringify({
-  step: "verified",
-  propertyId: propertyId.toString(),
-  propertyRef,
-  reportHash: hashBytes,
-  onChainReportHash: chainHash,
-  chainVerified,
-  transactionHash: anchorTx.hash,
-  contractAddress: CONTRACT_ADDRESS,
-  network: `${network.name} (${network.chainId.toString()})`,
-  blockNumber: anchorReceipt?.blockNumber
-}, null, 2));
+console.log(JSON.stringify({ step: "verified", propertyId: propertyId.toString(), propertyRef, reportHash: hashBytes, onChainReportHash: chainHash, chainVerified, transactionHash: anchorTx.hash, contractAddress: CONTRACT_ADDRESS, network: `${network.name} (${network.chainId.toString()})`, blockNumber: anchorReceipt?.blockNumber }, null, 2));
