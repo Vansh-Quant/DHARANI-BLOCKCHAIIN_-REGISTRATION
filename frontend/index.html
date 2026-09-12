@@ -4,10 +4,81 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>DHARANI — Land Records</title>
-  <style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#e7ece9}#dharani-original-frame{display:block;width:100%;height:100%;border:0}</style>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#e7ece9}
+    #dharani-original-frame{display:block;width:100%;height:100%;border:0}
+  </style>
 </head>
 <body>
   <iframe id="dharani-original-frame" src="original.html" title="DHARANI Original Frontend"></iframe>
   <script src="backend-integration.js"></script>
+  <script>
+    (function(){
+      const frame=document.getElementById('dharani-original-frame');
+      function restoreLoginArtwork(){
+        try{
+          const doc=frame.contentDocument;
+          if(!doc) return;
+          if(doc.getElementById('dharani-login-artwork-fix')) return;
+          const style=doc.createElement('style');
+          style.id='dharani-login-artwork-fix';
+          style.textContent=`
+            .login-visual{
+              position:relative!important;
+              overflow:hidden!important;
+              isolation:isolate!important;
+              background:
+                radial-gradient(circle at 82% 8%,rgba(255,255,255,.55),transparent 38%),
+                radial-gradient(circle at 12% 30%,rgba(180,220,200,.50),transparent 40%),
+                linear-gradient(165deg,#f2f8f4 0%,#e3f0e6 45%,#cfe6d6 100%)!important;
+            }
+            .login-visual::before{
+              content:"";
+              position:absolute;
+              inset:0;
+              z-index:0;
+              opacity:.55;
+              background:
+                radial-gradient(circle at 30% 60%,rgba(120,150,120,.18),transparent 45%),
+                radial-gradient(circle at 65% 68%,rgba(90,130,100,.16),transparent 40%);
+              filter:blur(6px);
+              pointer-events:none;
+            }
+            .login-visual::after{
+              content:"";
+              position:absolute;
+              left:0;
+              right:0;
+              bottom:0;
+              height:46%;
+              z-index:1;
+              background:linear-gradient(180deg,rgba(10,60,42,0) 0%,rgba(9,56,38,.55) 55%,rgba(7,46,31,.92) 100%);
+              clip-path:polygon(0% 38%,14% 30%,30% 40%,46% 26%,62% 36%,78% 22%,100% 32%,100% 100%,0% 100%);
+              pointer-events:none;
+            }
+            .login-visual>*{position:relative;z-index:2}
+            .login-copy::after{
+              content:"";
+              position:absolute;
+              left:34px;
+              bottom:26px;
+              width:78px;
+              height:96px;
+              z-index:3;
+              opacity:.92;
+              background:linear-gradient(135deg,#0b6749 0%,#168b5b 65%,#72c99d 100%);
+              clip-path:polygon(52% 100%,42% 72%,30% 55%,18% 40%,8% 27%,18% 18%,35% 15%,53% 18%,68% 29%,77% 43%,75% 59%,67% 74%,57% 88%);
+              filter:drop-shadow(0 8px 12px rgba(5,50,35,.18));
+              pointer-events:none;
+            }
+            @media(max-width:920px){.login-copy::after{display:none}}
+          `;
+          doc.head.appendChild(style);
+        }catch(e){console.warn('DHARANI login artwork restore skipped',e)}
+      }
+      frame.addEventListener('load',restoreLoginArtwork);
+      setTimeout(restoreLoginArtwork,250);
+    })();
+  </script>
 </body>
 </html>
